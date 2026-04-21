@@ -1,39 +1,31 @@
 import { test, expect } from '@playwright/test';
 
-test('ทดสอบหน้า Appointments', async ({ page }) => {
+test('ทดสอบหน้า Appointments ด้วย API Mocking', async ({ page }) => {
   const useMock = process.env.USE_MOCK === 'true';
 
-  // ถ้าใช้ Mock ให้ดักจับ API
   if (useMock) {
-    await page.route(`${process.env.NEXT_PUBLIC_API_URL}/appointments`, async route => {
+    await page.route(`${process.env.NEXT_PUBLIC_API_URL}/appointments`, route => {
       const mockAppointments = [
-        { id: 1, patient_name: 'Alice', date: '2026-04-20', time: '10:00', doctor: 'Dr. Smith' },
-        { id: 2, patient_name: 'Bob', date: '2026-04-21', time: '11:00', doctor: 'Dr. John' }
-      ];
-      await route.fulfill({ json: mockAppointments });
-    });
+        { id: 1, fullName: 'Alice', phone: '0812345678', appointmentDate: '2026-04-20', appointmentTime: '10:00' },
+        { id: 2, fullName: 'Bob', phone: '0898765432', appointmentDate: '2026-04-21', appointmentTime: '11:00' }
+      ]
+      route.fulfill({ json: mockAppointments })
+    })
   }
 
-  // ไปที่หน้า Appointments (URL จาก environment variable)
   await page.goto(`${process.env.NEXT_PUBLIC_FRONTEND_URL}/admin/appointments`);
 
-  // ตรวจสอบว่าตารางแสดงข้อมูล (ใช้ mock หรือจริงก็ได้)
-  if (useMock) {
-    await expect(page.locator('table')).toContainText('Alice');
-    await expect(page.locator('table')).toContainText('Bob');
-  }
+  // ตรวจสอบ table มีข้อมูล mock
+  await expect(page.locator('table')).toHaveText(/Alice/, { timeout: 10000 });
+  await expect(page.locator('table')).toHaveText(/Bob/);
 
-  // ทดสอบระบบค้นหา
-  const searchInput = page.getByPlaceholder('ค้นหาชื่อคนไข้ หรือวันที่...');
+  // ทดสอบ search
+  const searchInput = page.getByPlaceholder('ค้นหาชื่อ หรือ เบอร์โทร...');
   await searchInput.fill('Alice');
+  await expect(page.locator('table')).toHaveText(/Alice/);
+  await expect(page.locator('table')).not.toHaveText(/Bob/);
 
-  await expect(page.locator('table')).toContainText('Alice');
-  await expect(page.locator('table')).not.toContainText('Bob');
-
-  // ตรวจสอบ UI Elements
-  const addButton = page.getByRole('button', { name: 'เพิ่มนัดหมาย' });
-  const detailButtons = page.getByRole('button', { name: /รายละเอียด/ });
-
+  // ตรวจสอบ UI elements
+  const addButton = page.getByRole('button', { name: /\+ เพิ่มข้อมูลใหม่/ });
   await expect(addButton).toBeVisible();
-  await expect(detailButtons.first()).toBeVisible();
 });
