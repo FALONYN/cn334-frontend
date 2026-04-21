@@ -13,6 +13,7 @@ interface PatientRecord {
     diagnosis: string
 }
 
+// test
 export default function PatientManagementPage() {
     // 2. ระบุ Type ใหกับ State แทนการใช any[]
     const [patients, setPatients] = useState<PatientRecord[]>([])
